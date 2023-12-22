@@ -1,0 +1,26 @@
+name: build
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  remote:
+    name: Test for remarkable ${{ matrix.fw_version }}
+    strategy:
+      matrix:
+        fw_version: [2, 3]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the Git repository
+        uses: actions/checkout@v4
+      - uses: ./
+        with:
+          fw_version: ${{ matrix.fw_version }}
+          path: test
+          file: test.py
+          run: true

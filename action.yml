@@ -1,0 +1,164 @@
+name: 'reMarkable-Nuitka-Build-Action'
+description: Run nuitka build for the reMarkable tablet
+author: Eeems
+branding:
+  icon: tablet
+  color: white
+inputs:
+  main:
+    description: Name of the file to compile relative to the path argument
+    required: true
+  path:
+    description: Folder that contains the source code to compile.
+    required: false
+    default: ${{ github.workspace }}
+  output_dir:
+    description: Output directory to use relative to the path argument
+    required: false
+    default: dist
+  mode:
+    description: Compilation mode to use
+    type: choice
+    required: false
+    default: onefile
+    options:
+      - standalone
+      - onefile
+  lto:
+    description: Use link time optimizations
+    type: choice
+    required: false
+    default: auto
+    options:
+      - 'yes'
+      - 'no'
+      - auto
+  static_libpython:
+    description: Use static link library for python
+    type: choice
+    required: false
+    default: auto
+    options:
+      - 'yes'
+      - 'no'
+      - auto
+  extra_flags:
+    description: Extra flags to pass to nuitka
+    required: false
+    default: |
+      --assume-yes-for-downloads
+      --warn-implicit-exceptions
+      --warn-unusual-code
+      --remove-output
+      --enable-plugin=pylint-warnings
+      --enable-plugin=anti-bloat
+      --enable-plugin=upx
+      --enable-plugin=multiprocessing
+      --enable-plugin=implicit-imports
+      --enable-plugin=options-nanny
+      --enable-plugin=pkg-resources
+  run:
+    description: Execute immediately after compilation
+    type: boolean
+    required: false
+    default: false
+  fw_version:
+    description: reMarkable OS version to run in
+    required: false
+    default: 2.15.1
+  clean_docker_cache:
+    description: Clean the local docker cache before running
+    required: false
+    type: boolean
+    default: false
+  ccache_path:
+    description: Path to store the nuitka ccache folder
+    required: false
+    default: ${{ github.workspace }}/.nuitka
+  ccache_key:
+    description: Key used for nuitka ccache
+    required: false
+    default: ${{ github.job }}-remarkable-${{ matrix.fw_version }}
+runs:
+  using: composite
+  steps:
+    - name: Nuitka ccache
+      uses: actions/cache@v3
+      with:
+        path: ${{ inputs.ccache_path }}
+        key: ${{ inputs.ccache_key }}
+    - uses: Eeems-Org/run-in-remarkable-action@v1
+      with:
+        path: ${{ inputs.path }}
+        fw_version: ${{ inputs.fw_version }}
+        clean_cache: ${{ inputs.clean_docker_cache }}
+        setup: |
+          set -e
+          opkg update
+          opkg install perl ar
+          src_path=/home/root/.local/share/debian
+          debootstrap_path=/home/root/.local/share/debootstrap
+          wget \
+            https://salsa.debian.org/installer-team/debootstrap/-/archive/master/debootstrap-master.tar.gz \
+            --output-document=/tmp/debootstrap.tar.gz
+          mkdir -p "$debootstrap_path"
+          tar -xf /tmp/debootstrap.tar.gz -C "$debootstrap_path"
+          rm /tmp/debootstrap.tar.gz
+          if ! DEBOOTSTRAP_DIR="${debootstrap_path}/debootstrap-master" \
+            "${debootstrap_path}/debootstrap-master/debootstrap" \
+              --arch=armhf \
+              --variant=minbase \
+              bullseye "$src_path"; then
+            cat "${src_path}/debootstrap/debootstrap.log"
+            exit 1
+          fi
+          mkdir -p "${src_path}/usr/sbin"
+          cat > "${src_path}/usr/sbin/policy-rc.d" << EOF
+          #!/bin/sh
+          exit 101
+          EOF
+          chmod a+x "${src_path}/usr/sbin/policy-rc.d"
+          ln -sf /bin/true "${src_path}/usr/bin/ischroot"
+          cp /etc/hosts "${src_path}/etc/hosts"
+          cp /etc/resolv.conf "${src_path}/etc/resolv.conf"
+          ln -sf /root "${src_path}/home/root"
+          mount --bind /dev "${src_path}/dev"
+          mount --bind /dev/pts "${src_path}/dev/pts"
+          mount --bind /proc "${src_path}/proc"
+          mount --bind /sys "${src_path}/sys"
+          mount --bind /run "${src_path}/run"
+          mount -t tmpfs tmpfs "${src_path}/tmp"
+          chroot "$src_path" bash -x <<'EOF'
+            set -e
+            apt install -y ca-certificates
+            apt install -y \
+              python3-dev \
+              libffi-dev \
+              python3-pip \
+              python3-venv \
+              patchelf \
+              ccache
+            python3 -m venv /opt/lib/nuitka
+            source /opt/lib/nuitka/bin/activate
+            pip install nuitka
+          EOF
+        run: |
+          set -eu
+            src_path=/home/root/.local/share/debian
+            mount --bind . "${src_path}/mnt"
+            chroot "$src_path" bash -x <<'EOF'
+              set -e
+              source /opt/lib/nuitka/bin/activate
+              cd /mnt
+              if [ -f requirements.txt ]; then
+                pip install -r requirements.txt
+              fi
+              NUITKA_CACHE_DIR="/mnt/.nuitka" \
+              nuitka3 \
+                --${{ inputs.mode }} \
+                --lto=${{ inputs.lto }} \
+                --static-libpython=${{ inputs.static_libpython }} \
+                --output-dir="${{ inputs.output_dir }}" \
+                --main="${{ inputs.main }}" \
+                ${{ inputs.extra_flags }}
+            EOF
