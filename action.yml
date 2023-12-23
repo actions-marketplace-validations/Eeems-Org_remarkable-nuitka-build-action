@@ -99,7 +99,7 @@ runs:
             python3 -m venv /opt/lib/nuitka
             source /opt/lib/nuitka/bin/activate
             pip install \
-              --extra-index-url https://f.eeems.ca/Resources/wheels/ \
+              --extra-index-url https://wheels.eeems.codes/ \
               nuitka
           EOF
         run: |
