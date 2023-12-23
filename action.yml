@@ -123,6 +123,7 @@ runs:
             find "${chroot_path}/mnt/src/${{ inputs.output_dir }}" -name '*.bin' \
             | xargs -rn1 \
             | while read -r bin; do
+              echo "Running $(basename "$bin")"
               "$bin"
             done
           fi
