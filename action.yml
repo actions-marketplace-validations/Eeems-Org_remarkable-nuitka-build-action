@@ -94,48 +94,9 @@ runs:
         clean_cache: ${{ inputs.clean_docker_cache }}
         setup: |
           set -e
-          opkg update
-          opkg install perl ar
-          src_path=/home/root/.local/share/debian
-          debootstrap_path=/home/root/.local/share/debootstrap
-          wget \
-            https://salsa.debian.org/installer-team/debootstrap/-/archive/master/debootstrap-master.tar.gz \
-            --output-document=/tmp/debootstrap.tar.gz
-          mkdir -p "$debootstrap_path"
-          tar -xf /tmp/debootstrap.tar.gz -C "$debootstrap_path"
-          rm /tmp/debootstrap.tar.gz
-          if ! DEBOOTSTRAP_DIR="${debootstrap_path}/debootstrap-master" \
-            "${debootstrap_path}/debootstrap-master/debootstrap" \
-              --arch=armhf \
-              --variant=minbase \
-              --foreign \
-              bullseye "$src_path"; then
-            cat "${src_path}/debootstrap/debootstrap.log"
-            exit 1
-          fi
-          if ! chroot "$src_path" /debootstrap/debootstrap --second-stage; then
-            cat "${src_path}/debootstrap/debootstrap.log"
-            exit 1
-          fi
-          mkdir -p "${src_path}/usr/sbin"
-          cat > "${src_path}/usr/sbin/policy-rc.d" << EOF
-          #!/bin/sh
-          exit 101
-          EOF
-          chmod a+x "${src_path}/usr/sbin/policy-rc.d"
-          ln -sf /bin/true "${src_path}/usr/bin/ischroot"
-          cp /etc/hosts "${src_path}/etc/hosts"
-          cp /etc/resolv.conf "${src_path}/etc/resolv.conf"
-          ln -sf /root "${src_path}/home/root"
-          mount --bind /dev "${src_path}/dev"
-          mount --bind /dev/pts "${src_path}/dev/pts"
-          mount --bind /proc "${src_path}/proc"
-          mount --bind /sys "${src_path}/sys"
-          mount --bind /run "${src_path}/run"
-          mount -t tmpfs tmpfs "${src_path}/tmp"
-          chroot "$src_path" bash -x <<'EOF'
+          sh -c "$(wget https://raw.githubusercontent.com/Eeems-Org/remarkable-debian-chroot/master/install.sh -O-)"
+          debian-chroot bash -x <<'EOF'
             set -e
-            apt install -y ca-certificates
             apt install -y \
               python3-dev \
               libffi-dev \
@@ -149,21 +110,19 @@ runs:
           EOF
         run: |
           set -eu
-            src_path=/home/root/.local/share/debian
-            mount --bind . "${src_path}/mnt"
-            chroot "$src_path" bash -x <<'EOF'
-              set -e
-              source /opt/lib/nuitka/bin/activate
-              cd /mnt
-              if [ -f requirements.txt ]; then
-                pip install -r requirements.txt
-              fi
-              NUITKA_CACHE_DIR="/mnt/.nuitka" \
-              nuitka3 \
-                --${{ inputs.mode }} \
-                --lto=${{ inputs.lto }} \
-                --static-libpython=${{ inputs.static_libpython }} \
-                --output-dir="${{ inputs.output_dir }}" \
-                --main="${{ inputs.main }}" \
-                $(echo "${{ inputs.extra_flags }}" | tr '\n' ' ')
-            EOF
+          debian-chroot bash -x <<'EOF'
+            set -e
+            source /opt/lib/nuitka/bin/activate
+            cd /mnt/remarkable/src
+            if [ -f requirements.txt ]; then
+              pip install -r requirements.txt
+            fi
+            NUITKA_CACHE_DIR="/mnt/.nuitka" \
+            nuitka3 \
+              --${{ inputs.mode }} \
+              --lto=${{ inputs.lto }} \
+              --static-libpython=${{ inputs.static_libpython }} \
+              --output-dir="${{ inputs.output_dir }}" \
+              --main="${{ inputs.main }}" \
+              $(echo "${{ inputs.extra_flags }}" | tr '\n' ' ')
+          EOF
