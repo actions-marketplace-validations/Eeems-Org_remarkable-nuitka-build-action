@@ -165,5 +165,5 @@ runs:
                 --static-libpython=${{ inputs.static_libpython }} \
                 --output-dir="${{ inputs.output_dir }}" \
                 --main="${{ inputs.main }}" \
-                ${{ inputs.extra_flags }}
+                $(echo "${{ inputs.extra_flags }}" | tr '\n' ' ')
             EOF
