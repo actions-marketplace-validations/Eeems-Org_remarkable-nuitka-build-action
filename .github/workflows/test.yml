@@ -25,6 +25,6 @@ jobs:
       - uses: ./
         with:
           fw_version: ${{ matrix.fw_version }}
-          path: test
+          path: ${{ github.workspace }}/test
           main: test.py
           run: true
