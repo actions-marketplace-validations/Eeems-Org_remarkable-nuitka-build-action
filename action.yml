@@ -62,10 +62,6 @@ inputs:
     required: false
     type: boolean
     default: false
-  ccache_path:
-    description: Path to store the nuitka ccache folder
-    required: false
-    default: ${{ github.workspace }}/.nuitka
   ccache_key:
     description: Key used for nuitka ccache
     required: false
@@ -76,7 +72,7 @@ runs:
     - name: Nuitka ccache
       uses: actions/cache@v3
       with:
-        path: ${{ inputs.ccache_path }}
+        path: ${{ inputs.path }}/.nuitka
         key: ${{ inputs.ccache_key }}
     - uses: Eeems-Org/run-in-remarkable-action@v1
       with:
