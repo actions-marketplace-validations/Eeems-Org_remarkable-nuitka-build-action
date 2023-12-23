@@ -26,5 +26,5 @@ jobs:
         with:
           fw_version: ${{ matrix.fw_version }}
           path: test
-          file: test.py
+          main: test.py
           run: true
