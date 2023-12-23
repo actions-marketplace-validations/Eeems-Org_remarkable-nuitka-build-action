@@ -110,7 +110,7 @@ runs:
             if [ -f requirements.txt ]; then
               pip install -r requirements.txt
             fi
-            NUITKA_CACHE_DIR="/mnt/.nuitka" \
+            NUITKA_CACHE_DIR="/mnt/src/.nuitka" \
             nuitka3 \
               --${{ inputs.mode }} \
               --lto=${{ inputs.lto }} \
