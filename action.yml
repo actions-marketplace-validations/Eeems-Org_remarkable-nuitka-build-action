@@ -62,10 +62,6 @@ inputs:
     type: boolean
     required: false
     default: false
-  fw_version:
-    description: reMarkable OS version to run in
-    required: false
-    default: 2.15.1
   clean_docker_cache:
     description: Clean the local docker cache before running
     required: false
@@ -78,7 +74,7 @@ inputs:
   ccache_key:
     description: Key used for nuitka ccache
     required: false
-    default: ${{ github.job }}-remarkable-${{ matrix.fw_version }}
+    default: ${{ github.job }}-remarkable-2.15.1
 runs:
   using: composite
   steps:
@@ -90,7 +86,7 @@ runs:
     - uses: Eeems-Org/run-in-remarkable-action@v1
       with:
         path: ${{ inputs.path }}
-        fw_version: ${{ inputs.fw_version }}
+        fw_version: 2.15.1
         clean_cache: ${{ inputs.clean_docker_cache }}
         setup: |
           set -e
@@ -110,10 +106,13 @@ runs:
           EOF
         run: |
           set -eu
+          source .config/debian-chroot.conf
+          mkdir -p "${chroot_path}/mnt/src"
+          mount --bind /src "${chroot_path}/mnt/src"
           debian-chroot bash -x <<'EOF'
             set -e
             source /opt/lib/nuitka/bin/activate
-            cd /mnt/remarkable/src
+            cd /mnt/src
             if [ -f requirements.txt ]; then
               pip install -r requirements.txt
             fi

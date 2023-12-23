@@ -10,14 +10,7 @@ on:
 
 jobs:
   test:
-    name: Test for firmware ${{ matrix.fw_version }}
-    strategy:
-      matrix:
-        fw_version:
-          - 2.10.2
-          - 2.15.1
-          - 3.3.2
-          - 3
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the Git repository
