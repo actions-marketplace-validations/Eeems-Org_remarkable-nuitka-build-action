@@ -106,9 +106,9 @@ runs:
           EOF
         run: |
           set -eu
-          source .config/debian-chroot.conf
+          source /home/root/.config/debian-chroot.conf
           mkdir -p "${chroot_path}/mnt/src"
-          mount --bind /src "${chroot_path}/mnt/src"
+          mount --bind . "${chroot_path}/mnt/src"
           debian-chroot bash -x <<'EOF'
             set -e
             source /opt/lib/nuitka/bin/activate
