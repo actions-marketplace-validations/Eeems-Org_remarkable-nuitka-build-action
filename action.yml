@@ -51,12 +51,7 @@ inputs:
       --warn-unusual-code
       --remove-output
       --enable-plugin=pylint-warnings
-      --enable-plugin=anti-bloat
       --enable-plugin=upx
-      --enable-plugin=multiprocessing
-      --enable-plugin=implicit-imports
-      --enable-plugin=options-nanny
-      --enable-plugin=pkg-resources
   run:
     description: Execute immediately after compilation
     type: boolean
@@ -99,10 +94,13 @@ runs:
               python3-pip \
               python3-venv \
               patchelf \
-              ccache
+              ccache \
+              upx
             python3 -m venv /opt/lib/nuitka
             source /opt/lib/nuitka/bin/activate
-            pip install nuitka
+            pip install \
+              --extra-index-url https://f.eeems.ca/Resources/wheels/ \
+              nuitka
           EOF
         run: |
           set -eu
@@ -125,3 +123,10 @@ runs:
               --main="${{ inputs.main }}" \
               $(echo "${{ inputs.extra_flags }}" | tr '\n' ' ')
           EOF
+          if ${{ inputs.run }}; then
+            find "${chroot_path}/mnt/src/${{ inputs.output_dir }}" -name '*.bin' \
+            | xargs -rn1 \
+            | while read -r bin; do
+              "$bin"
+            done
+          fi
