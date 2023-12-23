@@ -94,6 +94,8 @@ runs:
         clean_cache: ${{ inputs.clean_docker_cache }}
         setup: |
           set -e
+          opkg update
+          opkg install perl
           sh -c "$(wget https://raw.githubusercontent.com/Eeems-Org/remarkable-debian-chroot/master/install.sh -O-)"
           debian-chroot bash -x <<'EOF'
             set -e
